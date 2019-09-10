@@ -51,6 +51,7 @@ void AddBinDir()
 
 	wcscat_s(exefile, ARRAYSIZE(exefile), L"\\bin");
 
+	//Msg("[SRCDS-PATCH] Added %S as bin dir\n", exefile);
 	AddDllDirectory(exefile);
 
 	const char *p2root = GetP2Root();
@@ -59,6 +60,7 @@ void AddBinDir()
 
 	wcscat_s(exefile, ARRAYSIZE(exefile), L"\\bin");
 
+	//Msg("[SRCDS-PATCH] Added %S as bin dir\n", exefile);
 	AddDllDirectory(exefile);
 }
 
@@ -417,7 +419,7 @@ bool PatchFuncs(bool dedicated)
 		strcat_s(game_dir, ARRAYSIZE(game_dir), "portal2");
 
 		char mod_dir[MAX_PATH]{'\0'};
-		const char *game = CommandLine()->ParmValue("-game", "");
+		const char *game = CommandLine()->ParmValue("-game", "portal2");
 		if(V_IsAbsolutePath(game)) {
 			strcpy_s(mod_dir, ARRAYSIZE(mod_dir), game);
 		} else {
@@ -425,7 +427,10 @@ bool PatchFuncs(bool dedicated)
 			strcat_s(mod_dir, ARRAYSIZE(mod_dir), game);
 		}
 
+		//Msg("[SRCDS-PATCH] Added %s to GAME searchpath\n", game_dir);
 		g_pFullFileSystem->AddSearchPath(game_dir, "GAME", PATH_ADD_TO_TAIL);
+
+		//Msg("[SRCDS-PATCH] Added %s to GAME searchpath\n", mod_dir);
 		g_pFullFileSystem->AddSearchPath(mod_dir, "GAME", PATH_ADD_TO_TAIL);
 #endif
 	//}
