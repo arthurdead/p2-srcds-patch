@@ -9,13 +9,17 @@
 #include "materialsystem/imaterialsystem.h"
 #include "vphysics_interface.h"
 #include "istudiorender.h"
+#ifdef DEDICATED_DLL
 class CAppSystemGroup;
 #include "engine_hlds_api.h"
+#endif
 #include "filesystem.h"
 #include "eiface.h"
 #include "game/server/iplayerinfo.h"
+#ifdef LAUNCHER_DLL
 #include "vgui/IPanel.h"
 #include "IVGuiModule.h"
+#endif
 
 #define protected public
 #include "appframework/IAppSystemGroup.h"
@@ -23,6 +27,14 @@ class CAppSystemGroup;
 
 #pragma comment(lib, "Pathcch.lib")
 #pragma comment(lib, "Shlwapi.lib")
+
+#if (!defined LAUNCHER_DLL && !defined DEDICATED_DLL)
+#error "netiher dll defined"
+#endif
+
+#if (defined LAUNCHER_DLL && defined DEDICATED_DLL)
+#error "both dll defined"
+#endif
 
 const char *GetP2Root()
 {
@@ -54,6 +66,7 @@ using Main_t = int (*)(HINSTANCE, HINSTANCE, const char *, int);
 int SharedMain(Main_t actualmain, HINSTANCE hInstance, HINSTANCE hPrevInstance, const char *lpCmdLine, int nCmdShow);
 bool g_bDedicated = false;
 
+#ifdef LAUNCHER_DLL
 EXTERN_C DLL_EXPORT int __cdecl LauncherMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, const char *lpCmdLine, int nCmdShow)
 {
 	AddBinDir();
@@ -69,7 +82,9 @@ EXTERN_C DLL_EXPORT int __cdecl LauncherMain(HINSTANCE hInstance, HINSTANCE hPre
 
 	return SharedMain(actualmain, hInstance, hPrevInstance, lpCmdLine, nCmdShow);
 }
+#endif
 
+#ifdef DEDICATED_DLL
 EXTERN_C DLL_EXPORT int __cdecl DedicatedMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, const char *lpCmdLine, int nCmdShow)
 {
 	AddBinDir();
@@ -85,6 +100,7 @@ EXTERN_C DLL_EXPORT int __cdecl DedicatedMain(HINSTANCE hInstance, HINSTANCE hPr
 
 	return SharedMain(actualmain, hInstance, hPrevInstance, lpCmdLine, nCmdShow);
 }
+#endif
 
 HANDLE dllInstance = NULL;
 BOOL WINAPI DllMain(HANDLE hInst, ULONG ulInit, LPVOID lpReserved)
@@ -120,14 +136,18 @@ int SharedMain(Main_t actualmain, HINSTANCE hInstance, HINSTANCE hPrevInstance, 
 	LoadLibraryExW(L"filesystem_stdio", nullptr, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
 	LoadLibraryExW(L"scenefilecache", nullptr, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
 
-	if(!g_bDedicated) {
+	//if(!g_bDedicated) {
+	#ifdef LAUNCHER_DLL
 		LoadLibraryExW(L"valve_avi", nullptr, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
 		LoadLibraryExW(L"vguimatsurface", nullptr, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
 		LoadLibraryExW(L"shaderapidx9", nullptr, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
 		LoadLibraryExW(L"serverbrowser", nullptr, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
-	} else {
+	#endif
+	//} else {
+	#ifdef DEDICATED_DLL
 		LoadLibraryExW(L"shaderapiempty", nullptr, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
-	}
+	#endif
+	//}
 
 	if(!PatchFuncs(g_bDedicated)) {
 		return 1;
@@ -162,6 +182,7 @@ T to_member(void *arg)
 	return u1;
 }
 
+#ifdef DEDICATED_DLL
 using Error_t = decltype(Error) *;
 Error_t TrueError = Error;
 
@@ -262,6 +283,7 @@ bool CSys::LoadModules(CAppSystemGroup *pAppSystemGroup)
 
 	return res;
 }
+#endif
 
 using GetModuleFileNameA_t = decltype(GetModuleFileNameA) *;
 GetModuleFileNameA_t TrueGetModuleFileNameA = GetModuleFileNameA;
@@ -344,6 +366,7 @@ bool PatchFuncs(bool dedicated)
 	//HookFunc2(TrueGetModuleFileNameA, FakeGetModuleFileNameA, TrueGetModuleFileNameA);
 
 	CreateInterfaceFn engienfac = Sys_GetFactory("engine");
+#ifdef DEDICATED_DLL
 	CreateInterfaceFn dedifac = Sys_GetFactory("dedicated_original");
 
 	void *tmp = LookupSignature(engienfac, "\x55\x8B\xEC\x83\xEC\x40\x8B\x0D\x2A\x2A\x2A\x2A");
@@ -357,10 +380,6 @@ bool PatchFuncs(bool dedicated)
 	CSys::Real_LoadModules = (CSys::LoadModules_t)to_member<CSys::LoadModules_t>(tmp);
 	HookFunc2(tmp, &CSys::LoadModules, CSys::Real_LoadModules);
 
-	//tmp = nullptr;
-	//CCommandLine::Real_CreateCmdLine = (CCommandLine::CreateCmdLine_t)to_member<CSys::CreateCmdLine_t>(tmp);
-	//HookFunc2(tmp, &CCommandLine::CreateCmdLine, CCommandLine::Real_CreateCmdLine);
-
 	HookFunc(TrueError, FakeError);
 
 	void *_Host_RunFrame_Client = LookupSignature(engienfac, "\x55\x8B\xEC\xFF\x15\x2A\x2A\x2A\x2A\xDD\x1D\x2A\x2A\x2A\x2A");
@@ -369,11 +388,19 @@ bool PatchFuncs(bool dedicated)
 	RealSteam3Client = (Steam3Client_t)GetFuncAtOffset(SetStartupInfo, 0xB5);
 	CSteam3Client::s_ActivateFunc = (CSteam3Client::Activate_t)to_member<CSteam3Client::Activate_t>(GetFuncAtOffset(SetStartupInfo, 0xBC));
 	CSteam3Client::s_RunFrameFunc = (CSteam3Client::RunFrame_t)to_member<CSteam3Client::RunFrame_t>(GetFuncAtOffset(_Host_RunFrame_Client, 0x5F));
+#else
+	void *tmp = NULL;
+#endif
+
+	//tmp = nullptr;
+	//CCommandLine::Real_CreateCmdLine = (CCommandLine::CreateCmdLine_t)to_member<CSys::CreateCmdLine_t>(tmp);
+	//HookFunc2(tmp, &CCommandLine::CreateCmdLine, CCommandLine::Real_CreateCmdLine);
 
 	CreateInterfaceFn filesys = Sys_GetFactory("filesystem_stdio");
 
 	g_pFullFileSystem = (IFileSystem *)filesys(FILESYSTEM_INTERFACE_VERSION, NULL);
 
+#ifdef DEDICATED_DLL
 	Steam3Client().Activate();
 
 	HMODULE dll = GetModuleHandleW(L"engine");
@@ -398,6 +425,7 @@ bool PatchFuncs(bool dedicated)
 
 	g_pFullFileSystem->AddSearchPath(game_dir, "GAME", PATH_ADD_TO_TAIL);
 	g_pFullFileSystem->AddSearchPath(mod_dir, "GAME", PATH_ADD_TO_TAIL);
+#endif
 
 	tmp = LookupSignature(engienfac, "\x55\x8B\xEC\x51\x56\x8B\xF1\x57\x8D\x4E\x04");
 	CServerPlugin::Real_LoadPlugins = (CServerPlugin::LoadPlugins_t)to_member<CServerPlugin::LoadPlugins_t>(tmp);
@@ -466,6 +494,7 @@ public:
 	}
 };
 
+#ifdef LAUNCHER_DLL
 FnCommandCallback_t oldopenserverbrowser{nullptr};
 vgui::IPanel *vguipanel = NULL;
 IVGuiModule *vguimodule = NULL;
@@ -493,6 +522,7 @@ public:
 		cmd->m_fnCommandCallback = callback;
 	}
 };
+#endif
 
 bool CEmptyPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn gameServerFactory)
 {
@@ -527,7 +557,8 @@ bool CEmptyPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn ga
 		buffer[i] = 0x90;
 	}
 
-	if(!engine->IsDedicatedServer()) {
+	//if(!engine->IsDedicatedServer()) {
+	#ifdef LAUNCHER_DLL
 		CreateInterfaceFn browserfac = Sys_GetFactory("serverbrowser");
 		CreateInterfaceFn vgui2fac = Sys_GetFactory("vgui2");
 
@@ -540,7 +571,8 @@ bool CEmptyPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn ga
 		ConCommand *openserverbrowser = g_pCVar->FindCommand("openserverbrowser");
 		oldopenserverbrowser = CCvar::GetCallback(openserverbrowser);
 		CCvar::SetCallback(openserverbrowser, newopenserverbrowser);
-	}
+	#endif
+	//}
 
 	return true;
 }

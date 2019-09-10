@@ -89,4 +89,5 @@ CopyFiles('assets', '',
 
 # Copy binaries.
 for cxx_task in Extension.extensions:
-  builder.AddCopy(cxx_task.binary, folder_map['bin'])
+  for task in cxx_task:
+    builder.AddCopy(task.binary, folder_map['bin'])
