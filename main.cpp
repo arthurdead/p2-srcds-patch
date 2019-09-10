@@ -490,7 +490,7 @@ class CServerClients
 public:
 	void GetPlayerLimits(int &min, int &max, int &def)
 	{
-		min = 1;
+		min = 3;
 		max = 33;
 		def = max;
 		sv_portal_players->SetValue(max);
@@ -511,6 +511,7 @@ void newopenserverbrowser(const CCommand &args)
 
 	vguipanel->SendMessage(vpanel, SetCustomScheme, vpanel);
 }
+#endif
 
 class CCvar
 {
@@ -525,7 +526,28 @@ public:
 		cmd->m_fnCommandCallback = callback;
 	}
 };
-#endif
+
+FnCommandCallback_t oldmaxplayers{nullptr};
+
+void newmaxplayers(const CCommand &args)
+{
+	int clients = -1;
+
+	if(args.ArgC () >= 2) {
+		clients = Q_atoi(args[1]);
+		if(clients <= 3) {
+			return;
+		}
+	}
+
+	if(clients != -1) {
+		sv_portal_players->SetValue(clients);
+	}
+
+	oldmaxplayers(args);
+}
+
+ConVar *mp_gamemode = NULL;
 
 bool CEmptyPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn gameServerFactory)
 {
@@ -535,6 +557,16 @@ bool CEmptyPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn ga
 
 	IPlayerInfoManager *playerinfomanager = (IPlayerInfoManager *)gameServerFactory(INTERFACEVERSION_PLAYERINFOMANAGER,NULL);
 	gpGlobals = playerinfomanager->GetGlobalVars();
+
+	mp_gamemode = new ConVar("mp_gamemode", "coop", 
+		FCVAR_REPLICATED|FCVAR_DEVELOPMENTONLY|
+	#ifdef LAUNCHER_DLL
+		FCVAR_CLIENTDLL
+	#else
+		FCVAR_GAMEDLL
+	#endif
+		, "Current game mode, acceptable values are coop, realism, versus, survival, scavenge and holdout; changed using map command, eg: map mapname versus"
+	);
 
 	ConVar_Register( 0 );
 
@@ -560,6 +592,10 @@ bool CEmptyPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn ga
 		buffer[i] = 0x90;
 	}
 
+	ConCommand *maxplayers = g_pCVar->FindCommand("maxplayers");
+	oldmaxplayers = CCvar::GetCallback(maxplayers);
+	CCvar::SetCallback(maxplayers, newmaxplayers);
+
 	//if(!engine->IsDedicatedServer()) {
 	#ifdef LAUNCHER_DLL
 		CreateInterfaceFn browserfac = Sys_GetFactory("serverbrowser");
@@ -582,7 +618,7 @@ bool CEmptyPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn ga
 
 void CEmptyPlugin::GameFrame(bool simulating)
 {
-	//sv_portal_players->SetValue(gpGlobals->maxClients);
+	
 }
 
 CEmptyPlugin g_EmptyPlugin{};
