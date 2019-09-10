@@ -1,0 +1,92 @@
+# vim: set ts=8 sts=2 sw=2 tw=99 et ft=python:
+import os
+
+# This is where the files will be output to
+# package is the default
+builder.SetBuildFolder('package')
+
+# Add any folders you need to this list
+folder_list = [
+  'bin',
+  "platform",
+  "platform/servers",
+  "platform/steam/games",
+  '',
+]
+
+# Create the distribution folder hierarchy.
+folder_map = {}
+for folder in folder_list:
+  norm_folder = os.path.normpath(folder)
+  folder_map[folder] = builder.AddFolder(norm_folder)
+
+# Do all straight-up file copies from the source tree.
+def CopyFiles(src, dest, files):
+  if not dest and dest != '':
+    dest = src
+  dest_entry = folder_map[dest]
+  for source_file in files:
+    source_path = os.path.join(builder.sourcePath, src, source_file)
+    builder.AddCopy(source_path, dest_entry)
+
+CopyFiles('assets/platform/servers', 'platform/servers',
+  [ 
+    "AddServerGamesPage.res",
+    "BlacklistedServersPage.res",
+    "CustomGamesPage.res",
+    "CustomGamesPage_Filters.res",
+    "CustomServerInfoDlg.res",
+    "DialogAddServer.res",
+    "DialogGameInfo.res",
+    "DialogGameInfo_AutoRetry.res",
+    "DialogGameInfo_SinglePlayer.res",
+    "DialogServerBrowser.res",
+    "DialogServerPassword.res",
+    "game_ready.wav",
+    "icon_bots.tga",
+    "icon_bots_column.tga",
+    "icon_password.tga",
+    "icon_password_column.tga",
+    "icon_robotron.tga",
+    "icon_secure_deny.tga",
+    "InternetGamesPage.res",
+    "InternetGamesPage_Filters.res",
+    "QuickListPanel.res",
+    "Regions.vdf",
+    "serverbrowser_english.txt",
+    "VACBannedConnRefusedDialog.res",
+  ]
+)
+
+CopyFiles('assets/platform/steam/games', 'platform/steam/games',
+  [ 
+    "PlatformMenu.vdf",
+  ]
+)
+
+CopyFiles('assets/bin', 'bin',
+  [ 
+    'dedicated_original.dll',
+    'launcher_original.dll',
+    'matchmaking_ds.dll',
+    'serverbrowser.dll',
+  ]
+)
+
+CopyFiles('assets/platform', 'platform',
+  [ 
+    "ingamedialogconfig.vdf",
+    "serverbrowser.vdf",
+  ]
+)
+
+CopyFiles('assets', '',
+  [ 
+    'srcds.exe',
+    'portal2.exe',
+  ]
+)
+
+# Copy binaries.
+for cxx_task in Extension.extensions:
+  builder.AddCopy(cxx_task.binary, folder_map['bin'])

@@ -1,0 +1,12 @@
+"Platform"
+{
+	"Menu"
+	{
+		"Servers"
+		{
+			"dll" "serverbrowser.dll"
+			"interface" "VGuiModuleServerBrowser001"
+			"MenuName" "#App_Servers"
+		}
+	}
+}

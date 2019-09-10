@@ -1,0 +1,35 @@
+# vim: set sts=2 ts=8 sw=2 tw=99 et ft=python:
+import os, sys
+
+projectName = 'dedicated'
+
+# smsdk_ext.cpp will be automatically added later
+sourceFiles = [
+  'main.cpp',
+
+  "appsystemgroup.cpp",
+  "memoryutils.cpp",
+
+  "detours/creatwth.cpp",
+  "detours/detours.cpp",
+  "detours/disasm.cpp",
+  "detours/disolx86.cpp",
+  "detours/image.cpp",
+  "detours/modules.cpp",
+]
+
+###############
+# Make sure to edit PackageScript, which copies your files to their appropriate locations
+# Simple extensions do not need to modify past this point.
+
+project = Extension.HL2Project(builder, projectName)
+
+project.sources += sourceFiles
+
+for sdk_name in Extension.sdks:
+  sdk = Extension.sdks[sdk_name]
+  
+  binary = Extension.HL2Config(project, "dedicated", sdk)
+  binary = Extension.HL2Config(project, "launcher", sdk)
+
+Extension.extensions = builder.Add(project)
