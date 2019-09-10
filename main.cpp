@@ -416,7 +416,7 @@ public:
 	const char *GetPluginDescription() override { return ""; }
 	void LevelInit(const char *pMapName) override {}
 	void ServerActivate(edict_t *pEdictList, int edictCount, int clientMax) override {}
-	void GameFrame(bool simulating) override {}
+	void GameFrame(bool simulating) override;
 	void LevelShutdown() override {}
 	void ClientActive(edict_t *pEntity) override {}
 	void ClientFullyConnect(edict_t *pEntity) override {}
@@ -462,6 +462,7 @@ public:
 		min = 1;
 		max = 33;
 		def = max;
+		sv_portal_players->SetValue(max);
 	}
 };
 
@@ -507,14 +508,12 @@ bool CEmptyPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn ga
 	CommandLine()->AppendParm("-allowspectators", "");
 
 	mp_dev_wait_for_other_player = g_pCVar->FindVar("mp_dev_wait_for_other_player");
-	if(mp_dev_wait_for_other_player) {
-		mp_dev_wait_for_other_player->InstallChangeCallback(dev_wait_change);
-	}
+	mp_dev_wait_for_other_player->InstallChangeCallback(dev_wait_change);
+	mp_dev_wait_for_other_player->SetValue(false);
 
 	sv_portal_players = g_pCVar->FindVar("sv_portal_players");
-	if(sv_portal_players) {
-		sv_portal_players->InstallChangeCallback(portals_players);
-	}
+	sv_portal_players->InstallChangeCallback(portals_players);
+	sv_portal_players->SetValue(33);
 
 	IServerGameClients *gameclients = (IServerGameClients *)gameServerFactory(INTERFACEVERSION_SERVERGAMECLIENTS,NULL);
 	void *tmp = (*(void ***)gameclients)[0];
@@ -544,6 +543,11 @@ bool CEmptyPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn ga
 	}
 
 	return true;
+}
+
+void CEmptyPlugin::GameFrame(bool simulating)
+{
+	//sv_portal_players->SetValue(gpGlobals->maxClients);
 }
 
 CEmptyPlugin g_EmptyPlugin{};
