@@ -366,31 +366,32 @@ bool PatchFuncs(bool dedicated)
 	//HookFunc2(TrueGetModuleFileNameA, FakeGetModuleFileNameA, TrueGetModuleFileNameA);
 
 	CreateInterfaceFn engienfac = Sys_GetFactory("engine");
-#ifdef DEDICATED_DLL
-	CreateInterfaceFn dedifac = Sys_GetFactory("dedicated_original");
-
-	void *tmp = LookupSignature(engienfac, "\x55\x8B\xEC\x83\xEC\x40\x8B\x0D\x2A\x2A\x2A\x2A");
-	Real_Host_RunFrame = (_Host_RunFrame_t)tmp;
-	HookFunc2(tmp, Fake_Host_RunFrame, Real_Host_RunFrame);
-
-	HookFunc(LookupSignature(dedifac, "\x55\x8B\xEC\x56\xFF\x15\x2A\x2A\x2A\x2A"), FileSystemFactory);
-	HookFunc(LookupSignature(dedifac, "\x55\x8B\xEC\xB8\x60\x22\x00\x00"), MountDependencies);
-
-	tmp = LookupSignature(dedifac, "\x55\x8B\xEC\x83\xEC\x68\xB8\x2A\x2A\x2A\x2A");
-	CSys::Real_LoadModules = (CSys::LoadModules_t)to_member<CSys::LoadModules_t>(tmp);
-	HookFunc2(tmp, &CSys::LoadModules, CSys::Real_LoadModules);
-
-	HookFunc(TrueError, FakeError);
-
-	void *_Host_RunFrame_Client = LookupSignature(engienfac, "\x55\x8B\xEC\xFF\x15\x2A\x2A\x2A\x2A\xDD\x1D\x2A\x2A\x2A\x2A");
-	void *SetStartupInfo = LookupSignature(engienfac, "\x55\x8B\xEC\x51\x56\x57\x8B\x3D\x2A\x2A\x2A\x2A\x8B\xF1");
-
-	RealSteam3Client = (Steam3Client_t)GetFuncAtOffset(SetStartupInfo, 0xB5);
-	CSteam3Client::s_ActivateFunc = (CSteam3Client::Activate_t)to_member<CSteam3Client::Activate_t>(GetFuncAtOffset(SetStartupInfo, 0xBC));
-	CSteam3Client::s_RunFrameFunc = (CSteam3Client::RunFrame_t)to_member<CSteam3Client::RunFrame_t>(GetFuncAtOffset(_Host_RunFrame_Client, 0x5F));
-#else
 	void *tmp = NULL;
+	//if(dedicated) {
+#ifdef DEDICATED_DLL
+		CreateInterfaceFn dedifac = Sys_GetFactory("dedicated_original");
+
+		tmp = LookupSignature(engienfac, "\x55\x8B\xEC\x83\xEC\x40\x8B\x0D\x2A\x2A\x2A\x2A");
+		Real_Host_RunFrame = (_Host_RunFrame_t)tmp;
+		HookFunc2(tmp, Fake_Host_RunFrame, Real_Host_RunFrame);
+
+		HookFunc(LookupSignature(dedifac, "\x55\x8B\xEC\x56\xFF\x15\x2A\x2A\x2A\x2A"), FileSystemFactory);
+		HookFunc(LookupSignature(dedifac, "\x55\x8B\xEC\xB8\x60\x22\x00\x00"), MountDependencies);
+
+		tmp = LookupSignature(dedifac, "\x55\x8B\xEC\x83\xEC\x68\xB8\x2A\x2A\x2A\x2A");
+		CSys::Real_LoadModules = (CSys::LoadModules_t)to_member<CSys::LoadModules_t>(tmp);
+		HookFunc2(tmp, &CSys::LoadModules, CSys::Real_LoadModules);
+
+		HookFunc(TrueError, FakeError);
+
+		void *_Host_RunFrame_Client = LookupSignature(engienfac, "\x55\x8B\xEC\xFF\x15\x2A\x2A\x2A\x2A\xDD\x1D\x2A\x2A\x2A\x2A");
+		void *SetStartupInfo = LookupSignature(engienfac, "\x55\x8B\xEC\x51\x56\x57\x8B\x3D\x2A\x2A\x2A\x2A\x8B\xF1");
+
+		RealSteam3Client = (Steam3Client_t)GetFuncAtOffset(SetStartupInfo, 0xB5);
+		CSteam3Client::s_ActivateFunc = (CSteam3Client::Activate_t)to_member<CSteam3Client::Activate_t>(GetFuncAtOffset(SetStartupInfo, 0xBC));
+		CSteam3Client::s_RunFrameFunc = (CSteam3Client::RunFrame_t)to_member<CSteam3Client::RunFrame_t>(GetFuncAtOffset(_Host_RunFrame_Client, 0x5F));
 #endif
+	//}
 
 	//tmp = nullptr;
 	//CCommandLine::Real_CreateCmdLine = (CCommandLine::CreateCmdLine_t)to_member<CSys::CreateCmdLine_t>(tmp);
@@ -400,32 +401,34 @@ bool PatchFuncs(bool dedicated)
 
 	g_pFullFileSystem = (IFileSystem *)filesys(FILESYSTEM_INTERFACE_VERSION, NULL);
 
+	//if(dedicated) {
 #ifdef DEDICATED_DLL
-	Steam3Client().Activate();
+		Steam3Client().Activate();
 
-	HMODULE dll = GetModuleHandleW(L"engine");
-	char base_dir[MAX_PATH]{'\0'};
-	GetModuleFileNameA(dll, base_dir, ARRAYSIZE(base_dir));
-	PathRemoveFileSpecA(base_dir);
-	PathRemoveFileSpecA(base_dir);
-	strcat_s(base_dir, ARRAYSIZE(base_dir), "\\");
+		HMODULE dll = GetModuleHandleW(L"engine");
+		char base_dir[MAX_PATH]{'\0'};
+		GetModuleFileNameA(dll, base_dir, ARRAYSIZE(base_dir));
+		PathRemoveFileSpecA(base_dir);
+		PathRemoveFileSpecA(base_dir);
+		strcat_s(base_dir, ARRAYSIZE(base_dir), "\\");
 
-	char game_dir[MAX_PATH]{'\0'};
-	strcpy_s(game_dir, ARRAYSIZE(game_dir), base_dir);
-	strcat_s(game_dir, ARRAYSIZE(game_dir), "portal2");
+		char game_dir[MAX_PATH]{'\0'};
+		strcpy_s(game_dir, ARRAYSIZE(game_dir), base_dir);
+		strcat_s(game_dir, ARRAYSIZE(game_dir), "portal2");
 
-	char mod_dir[MAX_PATH]{'\0'};
-	const char *game = CommandLine()->ParmValue("-game", "");
-	if(V_IsAbsolutePath(game)) {
-		strcpy_s(mod_dir, ARRAYSIZE(mod_dir), game);
-	} else {
-		strcpy_s(mod_dir, ARRAYSIZE(mod_dir), base_dir);
-		strcat_s(mod_dir, ARRAYSIZE(mod_dir), game);
-	}
+		char mod_dir[MAX_PATH]{'\0'};
+		const char *game = CommandLine()->ParmValue("-game", "");
+		if(V_IsAbsolutePath(game)) {
+			strcpy_s(mod_dir, ARRAYSIZE(mod_dir), game);
+		} else {
+			strcpy_s(mod_dir, ARRAYSIZE(mod_dir), base_dir);
+			strcat_s(mod_dir, ARRAYSIZE(mod_dir), game);
+		}
 
-	g_pFullFileSystem->AddSearchPath(game_dir, "GAME", PATH_ADD_TO_TAIL);
-	g_pFullFileSystem->AddSearchPath(mod_dir, "GAME", PATH_ADD_TO_TAIL);
+		g_pFullFileSystem->AddSearchPath(game_dir, "GAME", PATH_ADD_TO_TAIL);
+		g_pFullFileSystem->AddSearchPath(mod_dir, "GAME", PATH_ADD_TO_TAIL);
 #endif
+	//}
 
 	tmp = LookupSignature(engienfac, "\x55\x8B\xEC\x51\x56\x8B\xF1\x57\x8D\x4E\x04");
 	CServerPlugin::Real_LoadPlugins = (CServerPlugin::LoadPlugins_t)to_member<CServerPlugin::LoadPlugins_t>(tmp);
