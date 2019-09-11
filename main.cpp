@@ -553,6 +553,15 @@ void newmaxplayers(const CCommand &args)
 }
 
 ConVar *mp_gamemode = NULL;
+ConCommand *retry = NULL;
+
+using CL_Retry_t = void (*)();
+CL_Retry_t CL_Retry = NULL;
+
+void newretry(const CCommand &args)
+{
+	CL_Retry();
+}
 
 bool CEmptyPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn gameServerFactory)
 {
@@ -572,6 +581,8 @@ bool CEmptyPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn ga
 	#endif
 		, "Current game mode, acceptable values are coop, realism, versus, survival, scavenge and holdout; changed using map command, eg: map mapname versus"
 	);
+
+	retry = new ConCommand("retry", newretry, "Retry connection to last server.", FCVAR_DONTRECORD | FCVAR_SERVER_CAN_EXECUTE | FCVAR_CLIENTCMD_CAN_EXECUTE);
 
 	ConVar_Register( 0 );
 
@@ -596,6 +607,9 @@ bool CEmptyPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn ga
 	for(int i = 0xBC; i <= 0xD6; i++) {
 		buffer[i] = 0x90;
 	}
+
+	tmp = LookupSignature(interfaceFactory, "\x55\x8B\xEC\x83\xEC\x14\x57\xE8\x64\x4E\x00\x00\x2A\x2A\x2A\x2A\x2A");
+	CL_Retry = (CL_Retry_t)tmp;
 
 	ConCommand *maxplayers = g_pCVar->FindCommand("maxplayers");
 	oldmaxplayers = CCvar::GetCallback(maxplayers);
